@@ -135,7 +135,7 @@ export async function checkOut(
   const today = todayIST();
 
   const refundId = await db.transaction(async (tx) => {
-    const extras = input.extraCharges ?? [];
+    const extras = [...(input.extraCharges ?? [])];
     if (input.damageCharges) extras.push({ description: "Damage charges", amount: input.damageCharges });
     if (extras.length) {
       await tx.insert(bookingServices).values(extras.map((x) => ({ bookingId: b.id, serviceKey: x.description === "Damage charges" ? "DAMAGE" : "EXTRA", description: x.description, amount: x.amount, addedBy: staffId, atCheckout: true })));

@@ -1,5 +1,4 @@
 import "server-only";
-import { inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { applicationSettings } from "@/db/schema";
 
@@ -43,8 +42,22 @@ type SettingValue<K extends SettingKey> = (typeof SETTING_DEFAULTS)[K] extends n
     ? boolean
     : string;
 
+// Small in-process cache: settings are read on every quote/booking; admin writes call invalidateSettingsCache().
+let cache: { at: number; rows: Map<string, unknown> } | null = null;
+const TTL_MS = 30_000;
+export function invalidateSettingsCache() {
+  cache = null;
+}
+async function allRows() {
+  if (cache && Date.now() - cache.at < TTL_MS) return cache.rows;
+  const rows = await db.select({ key: applicationSettings.key, value: applicationSettings.value }).from(applicationSettings);
+  cache = { at: Date.now(), rows: new Map(rows.map((r) => [r.key, r.value])) };
+  return cache.rows;
+}
+
 export async function getSettings<K extends SettingKey>(keys: K[]): Promise<{ [P in K]: SettingValue<P> }> {
-  const rows = keys.length ? await db.select().from(applicationSettings).where(inArray(applicationSettings.key, keys)) : [];
+  const map = keys.length ? await allRows() : new Map<string, unknown>();
+  const rows = keys.filter((k) => map.has(k)).map((k) => ({ key: k as string, value: map.get(k) }));
   const out = {} as Record<string, unknown>;
   for (const k of keys) out[k] = SETTING_DEFAULTS[k];
   for (const r of rows) out[r.key] = r.value;

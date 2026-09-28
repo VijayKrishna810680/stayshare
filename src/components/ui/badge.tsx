@@ -16,7 +16,7 @@ export function Badge({ tone = "slate", className, children }: { tone?: Tone; cl
 }
 
 const STATUS_TONES: Record<string, Tone> = {
-  APPROVED: "green", ACTIVE: "green", CONFIRMED: "green", CAPTURED: "green", COMPLETED: "green", PAID: "green", PUBLISHED: "green", RESOLVED: "green", CLEAN: "green", AVAILABLE: "green", ELIGIBLE: "green", CHECKED_IN: "blue",
+  APPROVED: "green", SENT: "green", ACTIVE: "green", CONFIRMED: "green", CAPTURED: "green", COMPLETED: "green", PAID: "green", PUBLISHED: "green", RESOLVED: "green", CLEAN: "green", AVAILABLE: "green", ELIGIBLE: "green", CHECKED_IN: "blue",
   PENDING: "amber", PAYMENT_PENDING: "amber", INVENTORY_LOCKED: "amber", DRAFT: "slate", CHECK_IN_PENDING: "amber", REQUESTED: "amber", PROCESSING: "blue", AUTHORIZED: "blue", IN_PROGRESS: "blue", ASSIGNED: "blue", OPEN: "amber", ON_HOLD: "purple", REFUND_PENDING: "amber", CANCELLATION_REQUESTED: "amber", AWAITING_PAYMENT: "amber", CREATED: "slate", NEEDS_CLEANING: "amber", CLEANING: "amber", RESERVED: "blue", OCCUPIED: "blue", IN_PAYOUT: "blue", WAITING_FOR_CUSTOMER: "purple", WAITING_FOR_PROPERTY: "purple", CHANGES_REQUESTED: "purple", CHECKED_OUT: "slate",
   REJECTED: "red", FAILED: "red", CANCELLED: "red", SUSPENDED: "red", NO_SHOW: "red", BLOCKED: "red", HIDDEN: "red", REVERSED: "red", URGENT: "red", HIGH: "amber",
   REFUNDED: "purple", PARTIALLY_REFUNDED: "purple", CLOSED: "slate", NOT_SUBMITTED: "slate", UNDER_MAINTENANCE: "red", OK: "green", APPLIED: "green", LOW: "slate", MEDIUM: "blue",

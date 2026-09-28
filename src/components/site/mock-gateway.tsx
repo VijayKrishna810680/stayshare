@@ -15,7 +15,7 @@ const METHODS = [
 ] as const;
 
 /** DEVELOPMENT-only hosted checkout that plays the payment gateway (emits a signed webhook). */
-export function MockGateway({ orderId, amount, status, enabled, context, purpose, subscription }: { orderId: string; amount: number; status: string; enabled: boolean; context: { title: string; subtitle: string; holdExpiresAt: string | null; bookingId: string | null }; purpose: string; subscription: boolean }) {
+export function MockGateway({ orderId, amount, status, enabled, context, purpose, subscription, returnTo }: { orderId: string; amount: number; status: string; enabled: boolean; context: { title: string; subtitle: string; holdExpiresAt: string | null; bookingId: string | null }; purpose: string; subscription: boolean; returnTo?: string }) {
   const [method, setMethod] = useState<(typeof METHODS)[number]["v"]>("upi");
   const [busy, setBusy] = useState<"success" | "failure" | null>(null);
   const done = status === "CAPTURED";
@@ -25,7 +25,7 @@ export function MockGateway({ orderId, amount, status, enabled, context, purpose
     try {
       const r = await apiFetch<{ delivered: boolean; bookingId: string | null; subscriptionId: string | null; purpose: string }>("/api/payments/mock/simulate", { method: "POST", json: { orderId, outcome, method } });
       if (!r.delivered) toast.error("The gateway webhook was not accepted. Please try again.");
-      if (r.subscriptionId) window.location.href = `/account/subscriptions?payment=${outcome}`;
+      if (r.subscriptionId) window.location.href = `${returnTo ?? "/account/subscriptions"}?payment=${outcome}`;
       else if (r.bookingId && (r.purpose === "EXTENSION" || r.purpose === "MODIFICATION" || r.purpose === "CHECKOUT_DUES" || r.purpose === "SERVICE" || r.purpose === "SECURITY_DEPOSIT")) window.location.href = `/account/bookings/${r.bookingId}?payment=${outcome}`;
       else if (r.bookingId) window.location.href = `/booking/${r.bookingId}/status`;
       else window.location.href = "/account";

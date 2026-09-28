@@ -15,6 +15,7 @@ export default async function MockPayPage({ params }: { params: Promise<{ orderI
   const user = await pageUser({ next: `/pay/mock/${orderId}` });
   const [p] = await db.select().from(payments).where(eq(payments.providerOrderId, orderId));
   let ownerId = p?.userId ?? null;
+  let returnTo: string | undefined;
   let context: { title: string; subtitle: string; holdExpiresAt: string | null; bookingId: string | null } = { title: "Payment", subtitle: "", holdExpiresAt: null, bookingId: null };
   if (p?.bookingId) {
     const [b] = await db.select({ customerId: bookings.customerId, number: bookings.bookingNumber, lock: bookings.lockExpiresAt, prop: properties.name }).from(bookings).innerJoin(properties, eq(properties.id, bookings.propertyId)).where(eq(bookings.id, p.bookingId));
@@ -22,6 +23,7 @@ export default async function MockPayPage({ params }: { params: Promise<{ orderI
     context = { title: b?.prop ?? "Booking", subtitle: `Booking ${b?.number ?? ""} · ${p.purpose === "BOOKING" ? "Stay payment" : p.purpose === "EXTENSION" ? "Stay extension" : p.purpose.toLowerCase().replace(/_/g, " ")}`, holdExpiresAt: p.purpose === "BOOKING" ? (b?.lock?.toISOString() ?? null) : null, bookingId: p.bookingId };
   } else if (p?.subscriptionId) {
     const [s] = await db.select().from(subscriptions).where(eq(subscriptions.id, p.subscriptionId));
+    if (s?.audience === "OWNER") returnTo = "/owner/subscription";
     context = { title: s?.planSnapshot.name ?? "Subscription", subtitle: "Membership purchase", holdExpiresAt: null, bookingId: null };
   }
   if (!p || (ownerId !== user.id && !user.isAdmin)) {
@@ -41,6 +43,7 @@ export default async function MockPayPage({ params }: { params: Promise<{ orderI
         context={context}
         purpose={p.purpose}
         subscription={Boolean(p.subscriptionId)}
+        returnTo={returnTo}
       />
     </div>
   );

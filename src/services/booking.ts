@@ -51,6 +51,11 @@ export async function setStatus(tx: Tx, b: Pick<BookingRow, "id" | "status">, to
 
 // ───────────────────────────── create ─────────────────────────────
 
+async function hasBedScopedRules() {
+  const r = await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM pricing_rules WHERE active = true AND scope = 'BED'`);
+  return Number(r.rows[0]?.n ?? 0) > 0;
+}
+
 export type CreateBookingInput = {
   roomId: string;
   unit: "BED" | "ROOM";
@@ -118,6 +123,27 @@ export async function createBooking(customer: { id: string; name: string; email:
   const holdUntil = new Date(Date.now() + s["booking.holdMinutes"] * 60_000);
   const payAtProperty = input.paymentOption === "PAY_AT_PROPERTY";
 
+  // Price OUTSIDE the transaction: pricing reads use the shared pool, and holding a transaction
+  // connection while waiting for another pooled connection deadlocks under heavy concurrency.
+  const quoteFor = async (ids: string[]) =>
+    (
+      await buildQuote({
+        roomId: room.id,
+        unit: input.unit,
+        bedIds: ids,
+        checkIn: input.checkIn,
+        checkOut: input.checkOut,
+        adults: input.adults,
+        children: input.children,
+        services: input.services,
+        couponCode: input.couponCode,
+        customerId: customer.id,
+      })
+    ).quote;
+  const preIds = input.unit === "ROOM" ? [] : input.bedIds?.length ? input.bedIds : Array.from({ length: input.bedsCount }, () => "00000000-0000-0000-0000-000000000000");
+  const preQuote = await quoteFor(preIds);
+  const pre = { quote: preQuote, bedsKey: preIds.slice().sort().join(","), hasBedRules: input.unit === "BED" && (await hasBedScopedRules()) };
+
   const result = await db.transaction(async (tx) => {
     const number = await nextBookingNumber(city?.code ?? "IND", tx);
     const [b] = await tx
@@ -163,18 +189,8 @@ export async function createBooking(customer: { id: string; name: string; email:
       holdExpiresAt: holdUntil,
     });
 
-    const { quote: q } = await buildQuote({
-      roomId: room.id,
-      unit: input.unit,
-      bedIds,
-      checkIn: input.checkIn,
-      checkOut: input.checkOut,
-      adults: input.adults,
-      children: input.children,
-      services: input.services,
-      couponCode: input.couponCode,
-      customerId: customer.id,
-    });
+    const q = pre.quote;
+    const needsReprice = pre.hasBedRules && pre.bedsKey !== bedIds.slice().sort().join(",");
 
     await tx
       .update(bookings)
@@ -224,8 +240,21 @@ export async function createBooking(customer: { id: string; name: string; email:
     } else {
       await setStatus(tx, { id: booking.id, status: "DRAFT" }, "INVENTORY_LOCKED", customer.id, `Inventory held until ${holdUntil.toISOString()}`);
     }
-    return { bookingId: booking.id, bookingNumber: number, paymentAmount, total: q.totalAmount };
+    return { bookingId: booking.id, bookingNumber: number, paymentAmount, total: q.totalAmount, needsReprice, bedIds };
   });
+
+  if (result.needsReprice) {
+    // BED-scoped pricing rules: re-price with the beds actually allocated (outside the transaction).
+    const q2 = await quoteFor(result.bedIds);
+    if (q2.totalAmount !== result.total) {
+      await db
+        .update(bookings)
+        .set({ roomCharge: q2.roomCharge + q2.acCharge, promoDiscount: q2.promoDiscount, taxAmount: q2.taxAmount, totalAmount: q2.totalAmount, priceBreakdown: { lines: q2.lines, nightly: q2.nightly, tierApplied: q2.tierLabel, taxRateBps: q2.taxRateBps, convenienceFee: q2.convenienceFee, convenienceTax: q2.convenienceTax, appliedRules: q2.appliedRules } as never })
+        .where(eq(bookings.id, result.bookingId));
+      result.paymentAmount = input.paymentOption === "PARTIAL" ? Math.min(q2.totalAmount, result.paymentAmount) : q2.totalAmount;
+      result.total = q2.totalAmount;
+    }
+  }
 
   if (payAtProperty) {
     await afterConfirmed(result.bookingId);
@@ -318,6 +347,7 @@ async function recordCouponUsage(tx: Tx, b: Pick<BookingRow, "id" | "customerId"
 }
 
 export async function capturePayment(args: { providerOrderId: string; providerPaymentId: string; amount: number; method: string; fee?: number; raw?: unknown }) {
+  const { "fees.gatewayFeeBps": feeBps } = await getSettings(["fees.gatewayFeeBps"]);
   const outcome = await db.transaction(async (tx) => {
     const res = await tx.execute<{ id: string }>(sql`SELECT id FROM payments WHERE provider_order_id = ${args.providerOrderId} FOR UPDATE`);
     const pid = res.rows[0]?.id;
@@ -330,7 +360,6 @@ export async function capturePayment(args: { providerOrderId: string; providerPa
       logger.error("payment.amount_mismatch", { paymentId: p.id, expected: p.amount, got: args.amount });
       return { kind: "mismatch" as const, bookingId: p.bookingId ?? "" };
     }
-    const { "fees.gatewayFeeBps": feeBps } = await getSettings(["fees.gatewayFeeBps"]);
     await tx
       .update(payments)
       .set({ status: "CAPTURED", providerPaymentId: args.providerPaymentId, method: normaliseMethod(args.method), gatewayFee: args.fee ?? applyBps(p.amount, feeBps), capturedAt: new Date() })

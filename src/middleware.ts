@@ -13,6 +13,7 @@ const PROTECTED: { prefix: string; allow: (roles: string[], adm: boolean) => boo
   { prefix: "/staff", allow: (r) => r.includes("STAFF") || r.includes("OWNER") },
   { prefix: "/account", allow: () => true },
   { prefix: "/checkout", allow: () => true },
+  { prefix: "/booking", allow: () => true },
 ];
 
 export async function middleware(req: NextRequest) {
@@ -53,5 +54,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/admin/:path*", "/owner/:path*", "/staff/:path*", "/account/:path*", "/checkout/:path*"],
+  matcher: ["/api/:path*", "/admin/:path*", "/owner/:path*", "/staff/:path*", "/account/:path*", "/checkout/:path*", "/booking/:path*"],
 };

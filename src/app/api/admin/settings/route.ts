@@ -5,7 +5,7 @@ import { api, parseBody } from "@/lib/api";
 import { requirePermission } from "@/lib/auth/current";
 import { requireStepUp } from "@/lib/auth/step-up";
 import { badRequest } from "@/lib/errors";
-import { getAllSettings, SETTING_DEFAULTS, STEP_UP_SETTING_PREFIXES, type SettingKey } from "@/lib/settings";
+import { getAllSettings, SETTING_DEFAULTS, STEP_UP_SETTING_PREFIXES, type SettingKey, invalidateSettingsCache } from "@/lib/settings";
 import { logAudit, recordPriceChanges } from "../_lib/util";
 
 /** Keys the pricing team may change without full settings access. */
@@ -74,5 +74,6 @@ export const PUT = api(async (req) => {
       await logAudit(req, u, "settings.update", "setting", changed.join(","), Object.fromEntries(changed.map((k) => [k, before[k as SettingKey]])), Object.fromEntries(changed.map((k) => [k, values[k]])), tx);
     }
   });
+  invalidateSettingsCache();
   return { changed };
 });

@@ -37,7 +37,7 @@ export default async function AdminDashboard() {
           )}
         </div>
       )}
-      <section aria-label="Inventory & users" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+      <section aria-label="Inventory & users" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         <StatCard label="Total users" value={k.users.toLocaleString("en-IN")} icon={<Users className="h-5 w-5" />} tone="slate" />
         <StatCard label="Property owners" value={k.owners} icon={<Briefcase className="h-5 w-5" />} tone="slate" />
         <StatCard label="Properties" value={k.properties} hint={`${k.pending_props} pending approval`} icon={<Building2 className="h-5 w-5" />} tone="slate" />
@@ -45,7 +45,7 @@ export default async function AdminDashboard() {
         <StatCard label="Rooms" value={k.rooms} icon={<DoorOpen className="h-5 w-5" />} tone="slate" />
         <StatCard label="Beds" value={k.beds} icon={<BedDouble className="h-5 w-5" />} tone="slate" />
       </section>
-      <section aria-label="Bookings" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+      <section aria-label="Bookings" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         <StatCard label="Active bookings" value={k.active_bookings} icon={<CalendarCheck className="h-5 w-5" />} />
         <StatCard label="Completed" value={k.completed} icon={<CheckCircle2 className="h-5 w-5" />} tone="green" />
         <StatCard label="Cancelled" value={k.cancelled} icon={<XCircle className="h-5 w-5" />} tone="red" />
@@ -53,7 +53,7 @@ export default async function AdminDashboard() {
         <StatCard label="Check-ins today" value={k.today_checkins} icon={<LogIn className="h-5 w-5" />} />
         <StatCard label="Check-outs today" value={k.today_checkouts} icon={<LogOut className="h-5 w-5" />} />
       </section>
-      <section aria-label="Money & service" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+      <section aria-label="Money & service" className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {fin && (
           <>
             <StatCard label="Gross booking value" value={formatINR(k.gbv)} icon={<IndianRupee className="h-5 w-5" />} tone="accent" />

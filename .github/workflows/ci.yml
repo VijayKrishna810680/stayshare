@@ -1,0 +1,35 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: stayshare, POSTGRES_PASSWORD: stayshare, POSTGRES_DB: stayshare }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://stayshare:stayshare@localhost:5432/stayshare
+      TEST_DATABASE_URL: postgresql://stayshare:stayshare@localhost:5432/stayshare_test
+      JWT_SECRET: ci-jwt-secret-please-change-0123456789abcdef
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      OTP_DEV_MODE: "true"
+      PAYMENT_PROVIDER: mock
+      MOCK_WEBHOOK_SECRET: ci-mock-secret
+      APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: PGPASSWORD=stayshare psql -h localhost -U stayshare -c "CREATE DATABASE stayshare_test"
+      - run: npm test
+      - run: npm run build
+      - name: E2E smoke test
+        run: |
+          npm run db:migrate && npm run db:seed
+          cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/
+          PORT=3000 node .next/standalone/server.js & sleep 5
+          node scripts/e2e-smoke.mjs

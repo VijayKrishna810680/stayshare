@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>StayShare</title>
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,Roboto,sans-serif;background:#16423d;color:#fff;display:grid;place-items:center;min-height:100vh;text-align:center}
+  .b{padding:24px} h1{margin:12px 0 4px;font-size:26px} p{opacity:.85;margin:4px 0 20px}
+  button{background:#f29a1f;color:#fff;border:0;border-radius:12px;padding:12px 22px;font-size:16px;font-weight:600}
+  svg{width:72px;height:72px}
+</style>
+</head>
+<body>
+<div class="b">
+  <svg viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#1c7b6e"/><path d="M256 104 96 232v176h112V296h96v112h112V232z" fill="#fff"/><circle cx="256" cy="232" r="34" fill="#f29a1f"/></svg>
+  <h1>StayShare</h1>
+  <p>Flexible stays. Affordable sharing. Comfortable living.</p>
+  <p id="msg">You're offline. Check your internet connection.</p>
+  <button onclick="location.reload()">Try again</button>
+</div>
+</body>
+</html>

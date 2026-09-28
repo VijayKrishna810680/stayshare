@@ -1,0 +1,43 @@
+# Local / single-server deployment:  docker compose up --build
+# First run with demo data:          docker compose run --rm migrate npm run db:seed
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: stayshare
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stayshare}
+      POSTGRES_DB: stayshare
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stayshare"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    build: { context: ., target: tools }
+    environment:
+      DATABASE_URL: postgresql://stayshare:${POSTGRES_PASSWORD:-stayshare}@db:5432/stayshare
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+    depends_on:
+      db: { condition: service_healthy }
+    command: ["npm", "run", "db:migrate"]
+
+  app:
+    build: { context: ., target: runner }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://stayshare:${POSTGRES_PASSWORD:-stayshare}@db:5432/stayshare
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/data/storage
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:
